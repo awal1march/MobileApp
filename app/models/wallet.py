@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, Float, ForeignKey
-from app.database.db import Base
+from app.database import Base
 
 class Wallet(Base):
     __tablename__ = "wallets"

@@ -38,7 +38,7 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database.db import SessionLocal
+from app.database import SessionLocal
 from app.models.buy_request import BuyDataRequest
 from app.services.reseller_client import buy_data_bundle
 

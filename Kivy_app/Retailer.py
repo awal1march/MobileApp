@@ -8,7 +8,8 @@ import requests
 import json
 
 
-API_BASE = "http://127.0.0.1:8000"  # FastAPI backend
+# API_BASE = "http://127.0.0.1:8000"  # FastAPI backend
+API_BASE = "https://mobileapp-yy01.onrender.com"
 
 class MyApp(App):
     def build(self):

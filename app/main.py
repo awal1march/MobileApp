@@ -3,154 +3,178 @@ import uuid
 from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from app.core import config  # config.API_KEY
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
 
-from app.core import config  # Make sure config.API_KEY = "your real key"
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+# from app.database import engine, SessionLocal, Base
+from app import models, crud
+from fastapi.middleware.cors import CORSMiddleware
+
+
 
 app = FastAPI(title="VTU Reseller Backend")
 
-# Temporary transaction storage (we will later move to SQLite)
+
+# -------------------- CORS MIDDLEWARE --------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all devices; replace with your frontend in production
+    allow_methods=["*"],  # allow GET, POST, PUT, DELETE
+    allow_headers=["*"],  # allow all headers
+    allow_credentials=True
+)
+
+BASE_URL = "https://remadata.com/api"
+HEADERS = {
+    "X-API-KEY": config.API_KEY,
+    "Content-Type": "application/json"
+}
+
 transactions = []
 
 
-# -------------------- Schema --------------------
-class BuyDataRequest(BaseModel):
+# -------------------- SCHEMAS --------------------
+
+class BuyBundleRequest(BaseModel):
     phone_number: str
-    bundle_id: str
+    bundle_id: str   # Must match bundle ID from Remadata
 
 
-# -------------------- Health --------------------
+class LoadBundleRequest(BaseModel):
+    phone_number: str
+    amount: float
+    network: str
+
+
+# -------------------- ROOT --------------------
+
+@app.get("/")
+def root():
+    return {
+        "message": "VTU Reseller Backend is running 🚀",
+        "endpoints": [
+            "/health",
+            "/wallet",
+            "/bundles",
+            "/buy-bundle",
+            "/load-bundle",
+            "/transactions",
+            "/total-profit"
+        ]
+    }
+
+
+# -------------------- HEALTH --------------------
+
 @app.get("/health")
 def health():
     return {"status": "healthy"}
 
 
-# -------------------- Wallet --------------------
+# -------------------- HELPER FUNCTIONS --------------------
+
+def get_wallet_balance():
+    response = requests.get(
+        f"{BASE_URL}/wallet-balance",
+        headers=HEADERS,
+        timeout=10
+    )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    return float(response.json()["data"]["balance"])
+
+
+def get_all_bundles():
+    response = requests.get(
+        f"{BASE_URL}/bundles",
+        headers=HEADERS,
+        timeout=10
+    )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    return response.json()["data"]
+
+
+# -------------------- WALLET --------------------
+
 @app.get("/wallet")
 def wallet():
-    headers = {"X-API-KEY": config.API_KEY}
-
-    try:
-        response = requests.get(
-            "https://remadata.com/api/wallet-balance",
-            headers=headers,
-            timeout=10
-        )
-
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-
-        data = response.json()
-        balance = float(data.get("data", {}).get("balance", 0))
-
-        return {"wallet_balance": balance}
-
-    except requests.RequestException as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    balance = get_wallet_balance()
+    return {"wallet_balance": balance}
 
 
-# -------------------- Bundles --------------------
+# -------------------- GET BUNDLES --------------------
+
 @app.get("/bundles")
 def bundles():
-    headers = {"X-API-KEY": config.API_KEY}
+    bundles = get_all_bundles()
 
-    try:
-        response = requests.get(
-            "https://remadata.com/api/bundles",
-            headers=headers,
-            timeout=10
-        )
+    formatted = []
+    for bundle in bundles:
+        formatted.append({
+            "id": bundle["id"],  # IMPORTANT: use real ID
+            "name": bundle["name"],
+            "network": bundle["network"],
+            "volumeInMB": bundle["volumeInMB"],
+            "price": float(bundle["price"])
+        })
 
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-
-        data = response.json()
-
-        # Return only important fields for your Kivy app
-        formatted = []
-        for bundle in data.get("data", []):
-            formatted.append({
-                "id": bundle["name"],
-                "network": bundle["network"],
-                "volumeInMB": bundle["volumeInMB"],
-                "price": float(bundle["price"])
-            })
-
-        return {"bundles": formatted}
-
-    except requests.RequestException as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return {"bundles": formatted}
 
 
-# -------------------- Buy Bundle --------------------
-@app.post("/buy")
-def buy_bundle(payload: BuyDataRequest):
+# latest
+@app.post("/buy-bundle")
+def buy_bundle(payload: BuyBundleRequest):
+    wallet_balance = get_wallet_balance()
+    bundles = get_all_bundles()
 
-    headers = {"X-API-KEY": config.API_KEY}
-
-    # 1️⃣ Get Wallet Balance
-    wallet_resp = requests.get(
-        "https://remadata.com/api/wallet-balance",
-        headers=headers,
-        timeout=10
-    )
-
-    wallet_balance = float(wallet_resp.json()["data"]["balance"])
-
-    # 2️⃣ Get Bundles
-    bundles_resp = requests.get(
-        "https://remadata.com/api/bundles",
-        headers=headers,
-        timeout=10
-    )
-
-    bundles = bundles_resp.json()["data"]
-
-    # 3️⃣ Find Selected Bundle
-    selected_bundle = next(
-        (b for b in bundles if b["name"] == payload.bundle_id),
-        None
-    )
-
+    # Find the selected bundle by ID
+    selected_bundle = next((b for b in bundles if str(b["id"]) == payload.bundle_id), None)
     if not selected_bundle:
         raise HTTPException(status_code=400, detail="Bundle not found")
 
     api_price = float(selected_bundle["price"])
-
-    # 4️⃣ Add Your Markup (example: +2 GHS profit)
     selling_price = api_price + 2
     profit = selling_price - api_price
 
     if wallet_balance < api_price:
         raise HTTPException(status_code=400, detail="Insufficient wallet balance")
 
-    # 5️⃣ Buy From Remadata
+    # Remadata expects volumeInMB and networkType
     buy_payload = {
         "ref": str(uuid.uuid4()),
         "phone": payload.phone_number,
-        "volumeInMB": selected_bundle["volumeInMB"],
-        "networkType": selected_bundle["network"]
+        "volumeInMB": selected_bundle["volumeInMB"],  # add this
+        "networkType": selected_bundle["network"]     # add this
     }
 
-    resp = requests.post(
-        "https://remadata.com/api/buy-data",
-        headers=headers,
+    response = requests.post(
+        f"{BASE_URL}/buy-data",
+        headers=HEADERS,
         json=buy_payload,
         timeout=10
     )
 
-    if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
 
-    # 6️⃣ Save Transaction
     transaction = {
         "id": buy_payload["ref"],
         "phone": payload.phone_number,
-        "bundle": payload.bundle_id,
+        "bundle": selected_bundle["name"],
         "network": selected_bundle["network"],
         "api_price": api_price,
         "selling_price": selling_price,
         "profit": profit,
-        "date": datetime.now().isoformat()
+        "date": datetime.now().isoformat(),
+        "type": "bundle"
     }
 
     transactions.append(transaction)
@@ -158,20 +182,124 @@ def buy_bundle(payload: BuyDataRequest):
     return {
         "status": "success",
         "message": "Bundle purchased successfully",
-        "profit": profit,
         "selling_price": selling_price,
+        "profit": profit,
         "wallet_balance_after": wallet_balance - api_price
+    }
+# -------------------- LOAD BUNDLE (AIRTIME STYLE) --------------------
+
+@app.post("/load-bundle")
+def load_bundle(payload: LoadBundleRequest):
+
+    wallet_balance = get_wallet_balance()
+
+    if wallet_balance < payload.amount:
+        raise HTTPException(status_code=400, detail="Insufficient wallet balance")
+
+    load_payload = {
+        "ref": str(uuid.uuid4()),
+        "phone": payload.phone_number,
+        "amount": payload.amount,
+        "network": payload.network
+    }
+
+    response = requests.post(
+        f"{BASE_URL}/load-data",
+        headers=HEADERS,
+        json=load_payload,
+        timeout=10
+    )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    profit = payload.amount * 0.02  # example 2% commission
+
+    transaction = {
+        "id": load_payload["ref"],
+        "phone": payload.phone_number,
+        "network": payload.network,
+        "amount": payload.amount,
+        "profit": profit,
+        "date": datetime.now().isoformat(),
+        "type": "load"
+    }
+
+    transactions.append(transaction)
+
+    return {
+        "status": "success",
+        "message": "Bundle loaded successfully",
+        "profit": profit,
+        "wallet_balance_after": wallet_balance - payload.amount
     }
 
 
-# -------------------- Transaction History --------------------
+# -------------------- TRANSACTIONS --------------------
+
 @app.get("/transactions")
 def get_transactions():
     return transactions
 
 
-# -------------------- Total Profit --------------------
+# -------------------- TOTAL PROFIT --------------------
+
 @app.get("/total-profit")
 def total_profit():
     total = sum(t["profit"] for t in transactions)
     return {"total_profit": total}
+
+
+# app/main.py
+# import os
+# from fastapi import FastAPI
+# from app.database import engine, Base, SessionLocal
+# from sqlalchemy.exc import SQLAlchemyError
+
+# app = FastAPI(title="MobileApp API")
+
+# # -------------------------------------
+# # Startup event to create tables (optional)
+# # -------------------------------------
+# @app.on_event("startup")
+# def startup_event():
+#     try:
+#         Base.metadata.create_all(bind=engine)
+#         print("Tables created successfully")
+#     except SQLAlchemyError as e:
+#         print(f"Error creating tables: {e}")
+
+# # -------------------------------------
+# # Root endpoint
+# # -------------------------------------
+# @app.get("/")
+# def root():
+#     return {"status": "ok", "message": "MobileApp API is running"}
+
+# # -------------------------------------
+# # Test database connection
+# # -------------------------------------
+# @app.get("/test-db")
+# def test_db():
+#     try:
+#         conn = engine.connect()
+#         conn.close()
+#         return {"status": "success", "message": "Database connected"}
+#     except Exception as e:
+#         return {"status": "error", "message": str(e)}
+
+# # -------------------------------------
+# # Example: Wallet endpoint (replace with your logic)
+# # -------------------------------------
+# @app.get("/wallet")
+# def wallet():
+#     # Example placeholder
+#     return {"balance": 100, "currency": "USD"}
+
+# # -------------------------------------
+# # Uvicorn runner for local testing
+# # -------------------------------------
+# if __name__ == "__main__":
+#     import uvicorn
+#     port = int(os.environ.get("PORT", 8000))  # Render sets PORT automatically
+#     uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)

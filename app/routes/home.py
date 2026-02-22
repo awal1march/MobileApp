@@ -8,105 +8,111 @@
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 import requests
-from app.core import config  # contains API_KEY
+from app.core import config
 
 app = FastAPI(title="VTU Reseller Backend - RemaData")
 
-# ── Request Schema for Buy Data ──
-class BuyDataRequest(BaseModel):
-    phone: str                  # e.g. "0244123456"
-    plan_id: int                # from /bundles response
-    # Optional: you can add network if you want to validate it
 
-# ── Wallet Balance ──
+class BuyDataRequest(BaseModel):
+    phone: str
+    plan_id: int
+
+
+# ───────────── WALLET ─────────────
 @app.get("/wallet")
 def get_wallet_balance():
     headers = {
-        "Authorization": f"Bearer {config.API_KEY}",
+        "X-API-KEY": config.API_KEY,
         "Accept": "application/json"
     }
-    url = "https://remadata.com/api/wallet-balance"
 
     try:
-        resp = requests.get(url, headers=headers, timeout=10)
+        resp = requests.get(
+            "https://remadata.com/api/wallet-balance",
+            headers=headers,
+            timeout=10
+        )
         resp.raise_for_status()
+
         data = resp.json()
 
-        # Adjust based on actual response structure (this is a guess)
-        balance = data.get("data", {}).get("balance", 0)
-        return {"status": "success", "wallet_balance": balance}
+        return {
+            "status": "success",
+            "wallet_balance": data.get("balance", 0)
+        }
 
     except requests.Timeout:
-        raise HTTPException(status_code=504, detail="Request to RemaData timed out")
-    except requests.HTTPError as http_err:
-        raise HTTPException(status_code=resp.status_code, detail=f"API error: {http_err}")
+        raise HTTPException(status_code=504, detail="Wallet request timed out")
+    except requests.HTTPError:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch wallet: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── Fetch Available Bundles ──
+# ───────────── BUNDLES ─────────────
 @app.get("/bundles")
-def get_bundles(network: str = Query(None, description="Filter by network e.g. mtn, vodafone, airteltigo")):
+def get_bundles(network: str = Query(None)):
     headers = {
-        "Authorization": f"Bearer {config.API_KEY}",
+        "X-API-KEY": config.API_KEY,
         "Accept": "application/json"
     }
-    url = "https://remadata.com/api/bundles"
 
     params = {}
     if network:
-        # Normalize network name (RemaData might expect lowercase or specific format)
         params["network"] = network.lower()
 
     try:
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
+        resp = requests.get(
+            "https://remadata.com/api/bundles",
+            headers=headers,
+            params=params,
+            timeout=10
+        )
         resp.raise_for_status()
+
         data = resp.json()
 
-        bundles = data.get("data", [])
-        return {"status": "success", "data": bundles}
-
-    except requests.Timeout:
-        raise HTTPException(status_code=504, detail="Request timed out")
-    except requests.HTTPError as http_err:
-        raise HTTPException(status_code=resp.status_code or 502, detail=f"API returned error: {http_err}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch bundles: {str(e)}")
-
-
-# ── Buy Data Bundle ──
-@app.post("/buy-data")
-def buy_data(payload: BuyDataRequest):
-    headers = {
-        "Authorization": f"Bearer {config.API_KEY}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
-    url = "https://remadata.com/api/buy-data"
-
-    # Prepare payload in RemaData format
-    request_body = {
-        "phone": payload.phone,
-        "plan_id": payload.plan_id,
-        # "network": "MTN-GH"  # ← optional if RemaData infers from plan_id
-    }
-
-    try:
-        resp = requests.post(url, json=request_body, headers=headers, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-
-        # You can add extra validation / formatting here
         return {
-            "status": data.get("success", False) and "success" or "failed",
-            "message": data.get("message", "No message provided"),
+            "status": "success",
             "data": data
         }
 
     except requests.Timeout:
-        raise HTTPException(status_code=504, detail="Purchase request timed out")
-    except requests.HTTPError as http_err:
-        error_detail = resp.json() if resp.content else str(http_err)
-        raise HTTPException(status_code=resp.status_code or 502, detail=f"Purchase failed: {error_detail}")
+        raise HTTPException(status_code=504, detail="Bundles request timed out")
+    except requests.HTTPError:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Purchase failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ───────────── BUY DATA ─────────────
+@app.post("/buy")
+def buy(payload: BuyDataRequest):
+    headers = {
+        "X-API-KEY": config.API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    body = {
+        "phone": payload.phone,
+        "plan_id": payload.plan_id
+    }
+
+    try:
+        resp = requests.post(
+            "https://remadata.com/api/buy-data",
+            json=body,
+            headers=headers,
+            timeout=15
+        )
+        resp.raise_for_status()
+
+        return resp.json()
+
+    except requests.Timeout:
+        raise HTTPException(status_code=504, detail="Purchase timed out")
+    except requests.HTTPError:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

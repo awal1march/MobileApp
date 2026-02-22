@@ -37,7 +37,7 @@
 #WK
 from sqlalchemy import Column, Integer, String, Float, DateTime
 from datetime import datetime
-from app.database.database import Base
+from app.database import Base
 
 class Transaction(Base):
     __tablename__ = "transactions"
