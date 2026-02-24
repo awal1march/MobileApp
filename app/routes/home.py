@@ -101,19 +101,27 @@ def bundles():
     return {"bundles": formatted}
 
 # -------------------- BUY BUNDLE --------------------
-@app.post("/buy-data")
+
+@app.post("/buy-bundle")
 def buy_bundle(payload: BuyBundleRequest):
+
     wallet_balance = get_wallet_balance_from_api()
     bundles = get_all_bundles_from_api()
 
-    selected_bundle = next((b for b in bundles if str(b.get("id")) == payload.bundle_id), None)
+    selected_bundle = next(
+        (b for b in bundles if str(b.get("id")) == payload.bundle_id),
+        None
+    )
+
     if not selected_bundle:
         raise HTTPException(status_code=400, detail="Bundle not found")
 
     api_price = float(selected_bundle.get("price", 0))
+
     if wallet_balance < api_price:
         raise HTTPException(status_code=400, detail="Insufficient wallet balance")
 
+    # ✅ EXACT FORMAT REQUIRED BY REMADATA
     buy_payload = {
         "ref": str(uuid.uuid4()),
         "phone": payload.phone_number,
@@ -122,13 +130,22 @@ def buy_bundle(payload: BuyBundleRequest):
     }
 
     try:
-        response = requests.post(f"{BASE_URL}/buy-data", headers=get_headers(), json=buy_payload, timeout=20)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        response = requests.post(
+            f"{BASE_URL}/buy-data",
+            headers=get_headers(),
+            json=buy_payload,
+            timeout=20
+        )
 
-    # Profit calculation (GHS 2 markup)
+        response.raise_for_status()
+        api_response = response.json()
+
+    except requests.RequestException as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    # Profit = GHS 2 fixed markup
     profit = 2
+
     transactions.append({
         "id": buy_payload["ref"],
         "phone": payload.phone_number,
@@ -138,8 +155,12 @@ def buy_bundle(payload: BuyBundleRequest):
         "date": datetime.now().isoformat()
     })
 
-    return {"status": "success", "message": "Bundle purchased successfully", "profit": profit}
-
+    return {
+        "status": "success",
+        "message": "Bundle purchased successfully",
+        "profit": profit,
+        "remadata_response": api_response
+    }
 # -------------------- LOAD BUNDLE --------------------
 @app.post("/buy-data")
 def load_bundle(payload: LoadBundleRequest):
