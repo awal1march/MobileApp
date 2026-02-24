@@ -1,5 +1,11 @@
-from app.database.database import SessionLocal
+from app.database import SessionLocal
 from app.models.transaction import Transaction
+import requests
+from app import config
+from app.models.buy_request import BuyDataRequest
+from fastapi import FastAPI, HTTPException
+
+app = FastAPI(title="VTU Reseller Backend")
 
 @app.post("/buy-data")
 def buy_data(payload: BuyDataRequest):

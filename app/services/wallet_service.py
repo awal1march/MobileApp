@@ -1,5 +1,5 @@
 from app.models.wallet import Wallet
-from app.database.db import SessionLocal
+from app.database import SessionLocal
 
 def get_wallet_balance(user_id: int):
     db = SessionLocal()
