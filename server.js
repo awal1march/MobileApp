@@ -7,6 +7,27 @@ const app = express();
 app.use(cors());          // allow requests from any device
 app.use(express.json());
 
+const express = require("express");
+const cors = require("cors");
+
+
+
+// Your API routes here
+app.get("/api/bundles", (req, res) => {
+  res.json({ bundles: ["Bundle 1", "Bundle 2"] });
+});
+
+// Add a root route for testing
+app.get("/", (req, res) => {
+  res.send("VTU backend is running ✅");
+});
+
+// Use Render port or fallback to 3000
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 // --- Health check
 app.get("/health", (req, res) => {
     res.json({ status: "Server running ✅" });
@@ -136,7 +157,8 @@ app.post("/buy-data", async (req, res) => {
 });
 
 // --- Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () =>
-    console.log(`Server running on port ${PORT}`)
-);
+// const PORT = process.env.PORT || 3000;
+// app.listen(PORT, "0.0.0.0", () =>
+//     console.log(`Server running on port ${PORT}`)
+// );
+
