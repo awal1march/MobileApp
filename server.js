@@ -13,31 +13,84 @@ app.get("/health", (req, res) => {
 });
 
 // --- Get bundles (optional filter by network)
+// app.get("/bundles", async (req, res) => {
+//     try {
+//         const network = req.query.network;
+
+//         const response = await axios.get(`https://remadata.com/api/bundles`, {
+//             headers: { "X-API-KEY": process.env.REMADATA_API_KEY }
+//         });
+
+//         // Optional network filtering
+//         let bundles = response.data.bundles || [];
+//         if (network) {
+//             bundles = bundles.filter(b => b.network.toLowerCase() === network.toLowerCase());
+//         }
+
+//         res.json({ bundles });
+
+//     } catch (error) {
+//         console.error("Bundle fetch error:", error.response?.data || error.message);
+//         res.status(500).json({
+//             error: "Failed to fetch bundles",
+//             details: error.response?.data || error.message
+//         });
+//     }
+// });
+
+// app.get("/bundles", async (req, res) => {
+//   try {
+//     const network = req.query.network;
+//     const response = await axios.get("https://remadata.com/api/bundles", {
+//       headers: { "X-API-KEY": process.env.REMADATA_API_KEY }
+//     });
+
+//     console.log("Bundles response:", response.data);  // << check what actually comes
+
+//     let bundles = response.data.bundles || [];
+
+//     // Only filter if network exists and network field exists
+//     if (network) {
+//       bundles = bundles.filter(b => b.network && b.network.toLowerCase() === network.toLowerCase());
+//     }
+
+//     res.json({ bundles });
+
+//   } catch (error) {
+//     console.error("Bundle fetch error:", error.response?.data || error.message);
+//     res.status(500).json({
+//       error: "Failed to fetch bundles",
+//       details: error.response?.data || error.message
+//     });
+//   }
+// });
 app.get("/bundles", async (req, res) => {
     try {
         const network = req.query.network;
 
-        const response = await axios.get(`https://remadata.com/api/bundles`, {
+        const response = await axios.get("https://remadata.com/api/bundles", {
             headers: { "X-API-KEY": process.env.REMADATA_API_KEY }
         });
 
-        // Optional network filtering
-        let bundles = response.data.bundles || [];
+        // 🔥 FIX IS HERE
+        let bundles = response.data.data || [];
+
         if (network) {
-            bundles = bundles.filter(b => b.network.toLowerCase() === network.toLowerCase());
+            bundles = bundles.filter(
+                b => b.network && b.network.toLowerCase() === network.toLowerCase()
+            );
         }
 
         res.json({ bundles });
 
     } catch (error) {
-        console.error("Bundle fetch error:", error.response?.data || error.message);
+        console.error("Bundle fetch error:", error.message);
         res.status(500).json({
             error: "Failed to fetch bundles",
-            details: error.response?.data || error.message
+            details: error.message
         });
     }
 });
-
 // --- Wallet balance
 app.get("/wallet-balance", async (req, res) => {
     try {

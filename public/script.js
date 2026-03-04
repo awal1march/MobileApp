@@ -1,4 +1,4 @@
-const API_BASE = "https://mobileapp-yy01.onrender.com"; // Your Render backend
+const API_BASE = "http://localhost:3000"; // Your Render backend
 let selectedNetwork = "";
 
 // Select network
@@ -93,3 +93,4 @@ async function buyBundle() {
         console.error("Buy data error:", error);
     }
 }
+
