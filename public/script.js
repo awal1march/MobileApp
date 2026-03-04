@@ -1,4 +1,5 @@
-const API_BASE = "http://localhost:3000"; // Your Render backend
+const API_BASE = "https://remadata-retaile1-app.onrender.com"; // Your Render backend
+
 let selectedNetwork = "";
 
 // Select network
