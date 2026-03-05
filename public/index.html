@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -31,5 +31,145 @@ input, select, button { margin: 10px; padding: 10px; font-size: 16px; }
 <div id="log"></div>
 
 <script src="script.js"></script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<title>VTU Data Dashboard</title>
+
+<style>
+
+body{
+    font-family: Arial;
+    text-align:center;
+    padding:40px;
+    background:#f5f5f5;
+}
+
+h1{
+    color:#333;
+}
+
+input, select, button{
+
+    margin:10px;
+    padding:10px;
+    font-size:16px;
+    width:250px;
+
+}
+
+button{
+
+    cursor:pointer;
+    background:#2e7dff;
+    color:white;
+    border:none;
+    border-radius:4px;
+
+}
+
+button:hover{
+    background:#1f5ed8;
+}
+
+#log, #balance{
+
+    margin-top:20px;
+    font-family:monospace;
+
+}
+
+.network-buttons button{
+
+    width:120px;
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<h1>📶 VTU Data Purchase</h1>
+
+
+<!-- EMAIL REQUIRED FOR PAYSTACK -->
+<input
+type="email"
+id="email"
+placeholder="Enter email"
+/>
+
+
+<!-- USER PHONE NUMBER -->
+
+<input
+type="text"
+id="phone"
+placeholder="Enter phone number"
+/>
+
+
+<!-- NETWORK SELECTION -->
+
+<div class="network-buttons">
+
+<button onclick="selectNetwork('mtn')">
+MTN
+</button>
+
+<button onclick="selectNetwork('vodafone')">
+Telecel
+</button>
+
+<button onclick="selectNetwork('airteltigo')">
+AirtelTigo
+</button>
+
+</div>
+
+
+<!-- DATA PLANS -->
+
+<select id="plan">
+
+<option value="">
+Select data plan
+</option>
+
+</select>
+
+<br>
+
+
+<!-- ACTION BUTTONS -->
+
+<button onclick="buyBundle()">
+💳 Pay & Buy Data
+</button>
+
+<button onclick="getWalletBalance()">
+Check Remadata Wallet
+</button>
+
+
+
+<!-- OUTPUT AREA -->
+
+<div id="balance"></div>
+
+<div id="log"></div>
+
+
+
+<script src="script.js"></script>
+
 </body>
 </html>
