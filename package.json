@@ -4,12 +4,10 @@
   "description": "Remadata Retail App - VTU Dashboard & API Proxy",
   "main": "server.js",
   "type": "commonjs",
-
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-
   "keywords": [
     "remadata",
     "vtu",
@@ -18,21 +16,17 @@
     "api",
     "paystack"
   ],
-
   "author": "Mohammed Awal",
   "license": "MIT",
-
   "dependencies": {
     "axios": "^1.13.6",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "express": "^4.19.2"
   },
-
   "devDependencies": {
     "nodemon": "^3.1.0"
   },
-
   "engines": {
     "node": ">=18"
   }

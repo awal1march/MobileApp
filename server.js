@@ -109,6 +109,7 @@
 
 
 require("dotenv").config();
+console.log("Paystack Key:", process.env.PAYSTACK_SECRET_KEY);
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
@@ -119,27 +120,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve UI
+// Serve frontend
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ----------------------
+
+// =========================
 // HEALTH CHECK
-// ----------------------
+// =========================
 
 app.get("/health", (req, res) => {
     res.json({ status: "VTU backend running ✅" });
 });
 
 
-// ----------------------
+// =========================
 // GET DATA BUNDLES
-// ----------------------
+// =========================
 
 app.get("/bundles", async (req, res) => {
+
     try {
 
         const network = req.query.network;
@@ -157,8 +160,9 @@ app.get("/bundles", async (req, res) => {
 
         if (network) {
             bundles = bundles.filter(
-                b => b.network &&
-                b.network.toLowerCase() === network.toLowerCase()
+                b =>
+                    b.network &&
+                    b.network.toLowerCase() === network.toLowerCase()
             );
         }
 
@@ -166,18 +170,19 @@ app.get("/bundles", async (req, res) => {
 
     } catch (error) {
 
-        console.error("Bundle error:", error.message);
+        console.error("Bundle error:", error.response?.data || error.message);
 
         res.status(500).json({
             error: "Failed to fetch bundles"
         });
     }
+
 });
 
 
-// ----------------------
-// REMADATA WALLET BALANCE
-// ----------------------
+// =========================
+// WALLET BALANCE
+// =========================
 
 app.get("/wallet-balance", async (req, res) => {
 
@@ -196,20 +201,19 @@ app.get("/wallet-balance", async (req, res) => {
 
     } catch (error) {
 
-        console.error("Wallet error:", error.message);
+        console.error("Wallet error:", error.response?.data || error.message);
 
         res.status(500).json({
             error: "Failed to fetch wallet balance"
         });
-
     }
 
 });
 
 
-// ----------------------
+// =========================
 // INITIALIZE PAYSTACK PAYMENT
-// ----------------------
+// =========================
 
 app.post("/initialize-payment", async (req, res) => {
 
@@ -225,11 +229,13 @@ app.post("/initialize-payment", async (req, res) => {
                 email: email,
                 amount: amount * 100,
                 reference: reference,
+
                 metadata: {
                     phone,
                     plan,
                     network
                 }
+
             },
             {
                 headers: {
@@ -243,7 +249,10 @@ app.post("/initialize-payment", async (req, res) => {
 
     } catch (error) {
 
-        console.error("Paystack init error:", error.response?.data || error.message);
+        console.error(
+            "Paystack init error:",
+            error.response?.data || error.message
+        );
 
         res.status(500).json({
             error: "Payment initialization failed"
@@ -254,9 +263,9 @@ app.post("/initialize-payment", async (req, res) => {
 });
 
 
-// ----------------------
+// =========================
 // VERIFY PAYMENT + BUY DATA
-// ----------------------
+// =========================
 
 app.get("/verify-payment/:reference", async (req, res) => {
 
@@ -283,12 +292,15 @@ app.get("/verify-payment/:reference", async (req, res) => {
 
         }
 
-        // Extract bundle info
-        const phone = payment.metadata.phone;
-        const plan = payment.metadata.plan;
-        const network = payment.metadata.network;
+        const metadata = payment.metadata || {};
 
+        const phone = metadata.phone;
+        const plan = metadata.plan;
+        const network = metadata.network;
+
+        // =========================
         // BUY DATA FROM REMADATA
+        // =========================
 
         const buy = await axios.post(
             "https://remadata.com/api/buy-data",
@@ -312,7 +324,10 @@ app.get("/verify-payment/:reference", async (req, res) => {
 
     } catch (error) {
 
-        console.error("Verification error:", error.response?.data || error.message);
+        console.error(
+            "Verification error:",
+            error.response?.data || error.message
+        );
 
         res.status(500).json({
             error: "Verification failed"
@@ -323,12 +338,14 @@ app.get("/verify-payment/:reference", async (req, res) => {
 });
 
 
-// ----------------------
+// =========================
 // START SERVER
-// ----------------------
+// =========================
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
+
     console.log(`Server running on port ${PORT}`);
+
 });
