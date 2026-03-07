@@ -37,137 +37,98 @@ input, select, button { margin: 10px; padding: 10px; font-size: 16px; }
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
-<title>VTU Data Dashboard</title>
+<title>📶 VTU Data Dashboard</title>
 
 <style>
-
-body{
-    font-family: Arial;
-    text-align:center;
-    padding:40px;
-    background:#f5f5f5;
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 40px;
+    background: #f5f5f5;
 }
 
-h1{
-    color:#333;
+h1 {
+    color: #333;
+    margin-bottom: 30px;
 }
 
-input, select, button{
-
-    margin:10px;
-    padding:10px;
-    font-size:16px;
-    width:250px;
-
+input, select, button {
+    margin: 10px;
+    padding: 10px;
+    font-size: 16px;
+    width: 250px;
 }
 
-button{
-
-    cursor:pointer;
-    background:#2e7dff;
-    color:white;
-    border:none;
-    border-radius:4px;
-
+button {
+    cursor: pointer;
+    background: #2e7dff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    transition: background 0.3s;
 }
 
-button:hover{
-    background:#1f5ed8;
+button:hover {
+    background: #1f5ed8;
 }
 
-#log, #balance{
-
-    margin-top:20px;
-    font-family:monospace;
-
+#log, #balance {
+    margin-top: 20px;
+    font-family: monospace;
 }
 
-.network-buttons button{
-
-    width:120px;
-
+.network-buttons button {
+    width: 120px;
 }
-
 </style>
-
 </head>
-
 
 <body>
 
 <h1>📶 VTU Data Purchase</h1>
 
-
 <!-- EMAIL REQUIRED FOR PAYSTACK -->
 <input
-type="email"
-id="email"
-placeholder="Enter email"
+    type="email"
+    id="email"
+    placeholder="Enter email"
+    required
 />
-
 
 <!-- USER PHONE NUMBER -->
-
 <input
-type="text"
-id="phone"
-placeholder="Enter phone number"
+    type="tel"
+    id="phone"
+    placeholder="Enter phone number"
+    required
 />
 
-
 <!-- NETWORK SELECTION -->
-
 <div class="network-buttons">
-
-<button onclick="selectNetwork('mtn')">
-MTN
-</button>
-
-<button onclick="selectNetwork('vodafone')">
-Telecel
-</button>
-
-<button onclick="selectNetwork('airteltigo')">
-AirtelTigo
-</button>
-
+    <button onclick="selectNetwork('mtn')">MTN</button>
+    <button onclick="selectNetwork('vodafone')">Vodafone</button>
+    <button onclick="selectNetwork('airteltigo')">AirtelTigo</button>
 </div>
 
-
 <!-- DATA PLANS -->
-
 <select id="plan">
-
-<option value="">
-Select data plan
-</option>
-
+    <option value="">Select data plan</option>
 </select>
-
 <br>
 
-
 <!-- ACTION BUTTONS -->
-
-<button onclick="buyBundle()">
-💳 Pay & Buy Data
-</button>
-
-<button onclick="getWalletBalance()">
-Check Remadata Wallet
-</button>
-
-
+<button onclick="buyBundle()">💳 Pay & Buy Data</button>
+<button onclick="getWalletBalance()">💰 Check Remadata Wallet</button>
 
 <!-- OUTPUT AREA -->
-
 <div id="balance"></div>
-
 <div id="log"></div>
 
+<!-- PAYSTACK INLINE SCRIPT (Optional if using redirect method) -->
 <script src="https://js.paystack.co/v1/inline.js"></script>
+<!-- LINK TO YOUR FRONTEND SCRIPT -->
 <script src="script.js"></script>
+
 </body>
 </html>
