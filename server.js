@@ -114,59 +114,71 @@ const path = require("path");
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+// ----------------------------
+// PROFIT CONFIG
+// ----------------------------
+const MARKUP_PERCENT = 30; // Change this if you want higher/lower profit
 
-const PORT = process.env.PORT || 3000;
-
-/* =========================
-   PROFIT CONFIGURATION
-========================= */
-
-const MARKUP_PERCENT = 30; // 30% profit margin
-
-function calculateSellingPrice(cost) {
-    const price = cost + (cost * MARKUP_PERCENT / 100);
-    return Number(price.toFixed(2));
+function addProfit(price) {
+    return Number((price + (price * MARKUP_PERCENT / 100)).toFixed(2));
 }
 
-/* =========================
-   HEALTH CHECK
-========================= */
+// ----------------------------
+// MIDDLEWARE
+// ----------------------------
+app.use(cors());
+app.use(express.json());
 
-app.get("/health", (req, res) => {
-    res.json({ status: "Server running" });
+// Log all incoming requests safely
+app.use((req, res, next) => {
+    console.log("Incoming request:", req.method, req.url, req.body || {});
+    next();
 });
 
-/* =========================
-   GET DATA BUNDLES
-========================= */
+// Serve frontend
+app.use(express.static(path.join(__dirname, "public")));
 
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ----------------------------
+// HEALTH CHECK
+// ----------------------------
+app.get("/health", (req, res) => {
+    res.json({ status: "VTU backend running ✅" });
+});
+
+// ----------------------------
+// GET DATA BUNDLES (WITH PROFIT)
+// ----------------------------
 app.get("/bundles", async (req, res) => {
-
     try {
 
-        const response = await axios.get(
-            "https://remadata.com/api/bundles",
-            {
-                headers: {
-                    "X-API-KEY": process.env.REMADATA_API_KEY
-                }
-            }
-        );
+        const network = req.query.network;
 
-        const bundles = response.data.data.map(bundle => {
+        const response = await axios.get("https://remadata.com/api/bundles", {
+            headers: { "X-API-KEY": process.env.REMADATA_API_KEY }
+        });
+
+        let bundles = response.data.data || [];
+
+        if (network) {
+            bundles = bundles.filter(
+                b => b.network && b.network.toLowerCase() === network.toLowerCase()
+            );
+        }
+
+        // Add profit markup
+        bundles = bundles.map(bundle => {
 
             const costPrice = Number(bundle.price);
-            const sellingPrice = calculateSellingPrice(costPrice);
+            const sellingPrice = addProfit(costPrice);
 
             return {
-                id: bundle.id,
-                network: bundle.network,
-                volume: bundle.volume,
+                ...bundle,
                 cost_price: costPrice,
-                selling_price: sellingPrice
+                price: sellingPrice
             };
 
         });
@@ -174,37 +186,43 @@ app.get("/bundles", async (req, res) => {
         res.json({ bundles });
 
     } catch (error) {
-
-        console.error("Bundle fetch error:", error.message);
+        console.error("Bundle error:", error.response?.data || error.message);
         res.status(500).json({ error: "Failed to fetch bundles" });
-
     }
-
 });
 
-/* =========================
-   INITIALIZE PAYMENT
-========================= */
+// ----------------------------
+// WALLET BALANCE
+// ----------------------------
+app.get("/wallet-balance", async (req, res) => {
+    try {
+        const response = await axios.get("https://remadata.com/api/wallet-balance", {
+            headers: { "X-API-KEY": process.env.REMADATA_API_KEY }
+        });
+        res.json(response.data);
+    } catch (error) {
+        console.error("Wallet error:", error.response?.data || error.message);
+        res.status(500).json({ error: "Failed to fetch wallet balance" });
+    }
+});
 
+// ----------------------------
+// INITIALIZE PAYSTACK PAYMENT
+// ----------------------------
 app.post("/initialize-payment", async (req, res) => {
-
     try {
 
-        const { email, phone, network, plan, amount } = req.body;
+        const { email, amount, phone, plan, network } = req.body;
 
-        const reference = "VTU_" + Date.now();
+        const reference = `VTU_${Date.now()}`;
 
         const response = await axios.post(
             "https://api.paystack.co/transaction/initialize",
             {
                 email: email,
-                amount: Math.round(amount * 100), // convert to pesewas
+                amount: amount,
                 reference: reference,
-                metadata: {
-                    phone,
-                    network,
-                    plan
-                }
+                metadata: { phone, plan, network }
             },
             {
                 headers: {
@@ -217,20 +235,15 @@ app.post("/initialize-payment", async (req, res) => {
         res.json(response.data);
 
     } catch (error) {
-
-        console.error("Payment initialization error:", error.message);
+        console.error("Paystack init error:", error.response?.data || error.message);
         res.status(500).json({ error: "Payment initialization failed" });
-
     }
-
 });
 
-/* =========================
-   VERIFY PAYMENT
-========================= */
-
+// ----------------------------
+// VERIFY PAYMENT + BUY DATA
+// ----------------------------
 app.get("/verify-payment/:reference", async (req, res) => {
-
     try {
 
         const reference = req.params.reference;
@@ -238,90 +251,49 @@ app.get("/verify-payment/:reference", async (req, res) => {
         const verify = await axios.get(
             `https://api.paystack.co/transaction/verify/${reference}`,
             {
-                headers: {
-                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-                }
+                headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
             }
         );
 
         const payment = verify.data.data;
 
         if (payment.status !== "success") {
-            return res.json({ status: "payment_failed" });
+            return res.json({ payment: "failed", message: "Payment not successful" });
         }
 
-        const metadata = payment.metadata;
-
+        const metadata = payment.metadata || {};
         const phone = metadata.phone;
-        const network = metadata.network;
         const plan = metadata.plan;
+        const network = metadata.network;
 
-        /* =========================
-           BUY DATA FROM REMADATA
-        ========================= */
-
-        const buyData = await axios.post(
+        // Buy data from Remadata
+        const buy = await axios.post(
             "https://remadata.com/api/buy-data",
             {
+                ref: reference,
                 phone: phone,
                 volumeInMB: parseInt(plan),
-                networkType: network
+                networkType: network.toLowerCase()
             },
             {
-                headers: {
-                    "X-API-KEY": process.env.REMADATA_API_KEY
-                }
+                headers: { "X-API-KEY": process.env.REMADATA_API_KEY }
             }
         );
 
-        console.log("DATA PURCHASED:", buyData.data);
-
-        res.json({
-            payment: "successful",
-            data_purchase: buyData.data
-        });
+        res.json({ payment: "successful", data_purchase: buy.data });
 
     } catch (error) {
-
-        console.error("Verification error:", error.message);
+        console.error("Verification error:", error.response?.data || error.message);
         res.status(500).json({ error: "Verification failed" });
-
     }
-
 });
 
-/* =========================
-   WALLET BALANCE
-========================= */
+// ----------------------------
+// START SERVER
+// ----------------------------
+const PORT = process.env.PORT || 3000;
 
-app.get("/wallet-balance", async (req, res) => {
-
-    try {
-
-        const response = await axios.get(
-            "https://remadata.com/api/wallet-balance",
-            {
-                headers: {
-                    "X-API-KEY": process.env.REMADATA_API_KEY
-                }
-            }
-        );
-
-        res.json(response.data);
-
-    } catch (error) {
-
-        console.error("Wallet error:", error.message);
-        res.status(500).json({ error: "Wallet fetch failed" });
-
-    }
-
-});
-
-/* =========================
-   START SERVER
-========================= */
-
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
 });
+
