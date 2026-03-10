@@ -263,9 +263,10 @@ const API_BASE = "https://remadata-retaile1-app.onrender.com";
 let selectedNetwork = "";
 let selectedPrice = 0;
 
-// ----------------------------
-// SELECT NETWORK
-// ----------------------------
+/* =============================
+   SELECT NETWORK
+============================= */
+
 function selectNetwork(network) {
 
     selectedNetwork = network.toLowerCase();
@@ -277,9 +278,10 @@ function selectNetwork(network) {
 
 }
 
-// ----------------------------
-// LOAD BUNDLES
-// ----------------------------
+/* =============================
+   LOAD BUNDLES
+============================= */
+
 async function loadBundles(network) {
 
     try {
@@ -318,17 +320,27 @@ async function loadBundles(network) {
 
 }
 
-// ----------------------------
-// BUY BUNDLE (START PAYMENT)
-// ----------------------------
+/* =============================
+   BUY BUNDLE (START PAYMENT)
+============================= */
+
 async function buyBundle() {
 
     const phone = document.getElementById("phone").value.trim();
     const email = document.getElementById("email").value.trim();
 
     const planSelect = document.getElementById("plan");
-
     const plan = planSelect.value;
+
+    if (!phone || phone.length < 10) {
+        alert("Enter a valid phone number");
+        return;
+    }
+
+    if (!email || !email.includes("@")) {
+        alert("Enter a valid email address");
+        return;
+    }
 
     if (!plan) {
         alert("Please select a data plan");
@@ -336,7 +348,6 @@ async function buyBundle() {
     }
 
     const selectedOption = planSelect.options[planSelect.selectedIndex];
-
     const price = selectedOption.dataset.price;
 
     if (!price) {
@@ -353,12 +364,14 @@ async function buyBundle() {
         const paymentData = {
 
             email: email,
-            phone: phone,
+
+            payer_phone: phone,
+            beneficiary_phone: phone,
+
             plan: plan,
             network: selectedNetwork,
 
-            // Paystack uses kobo
-            amount: Math.round(selectedPrice * 100)
+            amount: selectedPrice
 
         };
 
@@ -389,7 +402,8 @@ async function buyBundle() {
 
         }
 
-        // Redirect to Paystack Checkout
+        /* Redirect to Paystack payment page */
+
         window.location.href = data.data.authorization_url;
 
     } catch (error) {
@@ -403,12 +417,16 @@ async function buyBundle() {
 
 }
 
-// ----------------------------
-// VERIFY PAYMENT AFTER REDIRECT
-// ----------------------------
+/* =============================
+   VERIFY PAYMENT AFTER REDIRECT
+============================= */
+
 async function verifyPayment(reference) {
 
     try {
+
+        document.getElementById("log").textContent =
+            "Verifying payment...";
 
         const response = await fetch(`${API_BASE}/verify-payment/${reference}`);
 
@@ -419,12 +437,12 @@ async function verifyPayment(reference) {
         if (json.payment === "successful") {
 
             document.getElementById("log").textContent =
-                "Payment verified ✅ Data bundle sent";
+                "✅ Data sent successfully to " + json.sent_to;
 
         } else {
 
             document.getElementById("log").textContent =
-                "Payment verification failed ❌";
+                "Payment verified but data delivery failed ❌";
 
         }
 
@@ -437,19 +455,22 @@ async function verifyPayment(reference) {
 
 }
 
-// ----------------------------
-// AUTO VERIFY AFTER REDIRECT
-// ----------------------------
+/* =============================
+   AUTO VERIFY AFTER PAYSTACK REDIRECT
+============================= */
+
 window.onload = function () {
 
     const params = new URLSearchParams(window.location.search);
 
-    const reference = params.get("reference");
+    const reference =
+        params.get("reference") ||
+        params.get("trxref");
 
     if (reference) {
 
         document.getElementById("log").textContent =
-            "Verifying payment reference: " + reference;
+            "Checking payment reference...";
 
         verifyPayment(reference);
 
