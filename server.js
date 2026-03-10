@@ -425,127 +425,40 @@ app.get("/wallet-balance", async (req, res) => {
 
 });
 
-app.post("/initialize-payment", async (req, res) => {
-
-    try {
-
-        const {
-            email,
-            amount,
-            payer_phone,
-            beneficiary_phone,
-            plan,
-            network
-        } = req.body;
-
-        const reference = `VTU_${Date.now()}`;
-
-        console.log("Initializing payment:", {
-            payer_phone,
-            beneficiary_phone,
-            plan,
-            network
-        });
-
-        const response = await axios.post(
-            "https://api.paystack.co/transaction/initialize",
-            {
-                email: email,
-                amount: amount,
-                reference: reference,
-                metadata: {
-                    payer_phone,
-                    beneficiary_phone,
-                    plan,
-                    network
-                }
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-                    "Content-Type": "application/json"
-                }
-            }
-        );
-
-        res.json(response.data);
-
-    } catch (error) {
-
-        console.error("Paystack init error:", error.response?.data || error.message);
-
-        res.status(500).json({
-            error: "Payment initialization failed"
-        });
-
-    }
-
-});
-//BELLOW MoMo prompt
-/* =========================
-   INITIALIZE PAYMENT WITH MoMo PROMPT
-========================= */
-
 // app.post("/initialize-payment", async (req, res) => {
+
 //     try {
 
-//         const { email, amount, payer_phone, beneficiary_phone, plan, network } = req.body;
-
-//         /* ===== VALIDATIONS ===== */
-
-//         if (!email || !amount || !payer_phone) {
-//             return res.status(400).json({
-//                 error: "Missing required fields"
-//             });
-//         }
-
-//         // Clean phone number
-//         const cleanPhone = payer_phone.replace(/\D/g, "");
-
-//         if (cleanPhone.length !== 10) {
-//             return res.status(400).json({
-//                 error: "Invalid phone number format. Use 10-digit Ghana number."
-//             });
-//         }
-
-//         // Validate email
-//         if (!email.includes("@")) {
-//             return res.status(400).json({
-//                 error: "Invalid email address"
-//             });
-//         }
+//         const {
+//             email,
+//             amount,
+//             payer_phone,
+//             beneficiary_phone,
+//             plan,
+//             network
+//         } = req.body;
 
 //         const reference = `VTU_${Date.now()}`;
 
-//         console.log("Charging MoMo:", {
-//             email,
-//             amount,
-//             cleanPhone
+//         console.log("Initializing payment:", {
+//             payer_phone,
+//             beneficiary_phone,
+//             plan,
+//             network
 //         });
 
-//         /* ===== PAYSTACK CHARGE ===== */
-
-//         const paystackResponse = await axios.post(
-//             "https://api.paystack.co/charge",
+//         const response = await axios.post(
+//             "https://api.paystack.co/transaction/initialize",
 //             {
 //                 email: email,
-//                 amount: Math.round(amount * 100), // convert to Kobo
+//                 amount: amount,
 //                 reference: reference,
-
-//                 channels: ["mobile_money"],
-
-//                 mobile_money: {
-//                     phone: cleanPhone,
-//                     country_code: "GH"
-//                 },
-
 //                 metadata: {
-//                     payer_phone: cleanPhone,
+//                     payer_phone,
 //                     beneficiary_phone,
 //                     plan,
 //                     network
 //                 }
-
 //             },
 //             {
 //                 headers: {
@@ -555,29 +468,116 @@ app.post("/initialize-payment", async (req, res) => {
 //             }
 //         );
 
-//         console.log("Paystack response:", paystackResponse.data);
-
-//         /* ===== SEND RESPONSE ===== */
-
-//         res.json({
-//             status: "success",
-//             message: "MoMo prompt sent to user's phone",
-//             reference: reference,
-//             paystack: paystackResponse.data
-//         });
+//         res.json(response.data);
 
 //     } catch (error) {
 
-//         console.error("PAYSTACK ERROR:");
-//         console.error(error.response?.data || error.message);
+//         console.error("Paystack init error:", error.response?.data || error.message);
 
 //         res.status(500).json({
-//             error: "Payment initialization failed",
-//             details: error.response?.data || error.message
+//             error: "Payment initialization failed"
 //         });
 
 //     }
+
 // });
+//BELLOW MoMo prompt
+/* =========================
+   INITIALIZE PAYMENT WITH MoMo PROMPT
+========================= */
+
+app.post("/initialize-payment", async (req, res) => {
+    try {
+
+        const { email, amount, payer_phone, beneficiary_phone, plan, network } = req.body;
+
+        /* ===== VALIDATIONS ===== */
+
+        if (!email || !amount || !payer_phone) {
+            return res.status(400).json({
+                error: "Missing required fields"
+            });
+        }
+
+        // Clean phone number
+        const cleanPhone = payer_phone.replace(/\D/g, "");
+
+        if (cleanPhone.length !== 10) {
+            return res.status(400).json({
+                error: "Invalid phone number format. Use 10-digit Ghana number."
+            });
+        }
+
+        // Validate email
+        if (!email.includes("@")) {
+            return res.status(400).json({
+                error: "Invalid email address"
+            });
+        }
+
+        const reference = `VTU_${Date.now()}`;
+
+        console.log("Charging MoMo:", {
+            email,
+            amount,
+            cleanPhone
+        });
+
+        /* ===== PAYSTACK CHARGE ===== */
+
+        const paystackResponse = await axios.post(
+            "https://api.paystack.co/charge",
+            {
+                email: email,
+                amount: Math.round(amount * 100), // convert to Kobo
+                reference: reference,
+
+                channels: ["mobile_money"],
+
+                mobile_money: {
+                    phone: cleanPhone,
+                    country_code: "GH"
+                },
+
+                metadata: {
+                    payer_phone: cleanPhone,
+                    beneficiary_phone,
+                    plan,
+                    network
+                }
+
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        console.log("Paystack response:", paystackResponse.data);
+
+        /* ===== SEND RESPONSE ===== */
+
+        res.json({
+            status: "success",
+            message: "MoMo prompt sent to user's phone",
+            reference: reference,
+            paystack: paystackResponse.data
+        });
+
+    } catch (error) {
+
+        console.error("PAYSTACK ERROR:");
+        console.error(error.response?.data || error.message);
+
+        res.status(500).json({
+            error: "Payment initialization failed",
+            details: error.response?.data || error.message
+        });
+
+    }
+});
 /* =========================
    INITIALIZE PAYMENT
 ========================= */
