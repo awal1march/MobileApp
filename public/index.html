@@ -38,6 +38,9 @@ input, select, button { margin: 10px; padding: 10px; font-size: 16px; }
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<marquee id="noticeBar" behavior="scroll" direction="left" style="background:#222;color:#fff;padding:10px;">
+Welcome to our VTU service. Buy data for yourself or others easily!
+</marquee>
 <title>📶 VTU Data Dashboard</title>
 
 <style>
@@ -81,6 +84,16 @@ button:hover {
 .network-buttons button {
     width: 120px;
 }
+
+#notice-banner{
+  background:#ffcc00;
+  color:#000;
+  text-align:center;
+  padding:12px;
+  font-weight:bold;
+  font-size:16px;
+}
+
 </style>
 </head>
 
@@ -100,7 +113,7 @@ button:hover {
 <input
     type="tel"
     id="phone"
-    placeholder="Enter phone number"
+    placeholder="Our contact:0542217459"
     required
 />
 
@@ -129,6 +142,9 @@ button:hover {
 <script src="https://js.paystack.co/v1/inline.js"></script>
 <!-- LINK TO YOUR FRONTEND SCRIPT -->
 <script src="script.js"></script>
-
+<div id="notice-banner">
+⚠️ NOTICE: We are currently upgrading our payment system. 
+If payment fails, please try again after a few minutes.
+</div>
 </body>
 </html>
