@@ -303,7 +303,7 @@ const app = express();
    PROFIT CONFIG
 ========================= */
 
-const MARKUP_PERCENT = 30;
+const MARKUP_PERCENT = 20;
 
 function addProfit(price) {
     return Number((price + (price * MARKUP_PERCENT / 100)).toFixed(2));
@@ -452,6 +452,7 @@ app.post("/initialize-payment", async (req, res) => {
                 email: email,
                 amount: Math.round(amount * 100),
                 reference: reference,
+                callback_url: "https://remadata-retaile1-app.onrender.com",
                 metadata: {
                     payer_phone,
                     beneficiary_phone,
