@@ -1034,11 +1034,23 @@ app.post("/initialize-payment", async (req, res) => {
     try {
         const { email, bundle_id, payer_phone, beneficiary_phone } = req.body;
 
+        console.log("Incoming payment request:", req.body);
+
+        // ✅ Validate input
         if (!email || !bundle_id) {
-            return res.status(400).json({ error: "Missing fields" });
+            return res.status(400).json({
+                error: "Missing required fields"
+            });
         }
 
-        // 🔥 Fetch real bundle
+        // ✅ Check env variables
+        if (!process.env.REMADATA_API_KEY || !process.env.PAYSTACK_SECRET_KEY) {
+            return res.status(500).json({
+                error: "Server config error (API keys missing)"
+            });
+        }
+
+        // 🔥 Fetch bundles
         const response = await axios.get(
             "https://remadata.com/api/bundles",
             {
@@ -1048,22 +1060,43 @@ app.post("/initialize-payment", async (req, res) => {
             }
         );
 
-        const bundle = response.data.data.find(b => b.id == bundle_id);
+        const allBundles = response.data.data || [];
+
+        // ✅ Ensure correct ID comparison
+        const bundle = allBundles.find(
+            b => String(b.id) === String(bundle_id)
+        );
 
         if (!bundle) {
-            return res.status(400).json({ error: "Invalid bundle" });
+            console.log("Bundle not found:", bundle_id);
+            return res.status(400).json({
+                error: "Invalid bundle selected"
+            });
         }
 
         const realPrice = addProfit(Number(bundle.price));
 
+        if (isNaN(realPrice)) {
+            return res.status(500).json({
+                error: "Invalid bundle price"
+            });
+        }
+
         const reference = `VTU_${Date.now()}`;
 
+        console.log("Initializing Paystack:", {
+            email,
+            amount: realPrice,
+            reference
+        });
+
+        // 🔥 Paystack request
         const pay = await axios.post(
             "https://api.paystack.co/transaction/initialize",
             {
-                email,
-                amount: Math.round(realPrice * 100),
-                reference,
+                email: email,
+                amount: Math.round(realPrice * 100), // pesewas
+                reference: reference,
                 callback_url: "https://remadata-retaile1-app.onrender.com",
                 metadata: {
                     bundle_id,
@@ -1073,18 +1106,28 @@ app.post("/initialize-payment", async (req, res) => {
             },
             {
                 headers: {
-                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                    "Content-Type": "application/json"
                 }
             }
         );
 
+        console.log("Paystack success:", pay.data);
+
         res.json(pay.data);
 
     } catch (error) {
-        res.status(500).json({ error: "Payment init failed" });
+
+        console.error("❌ Payment init FULL error:",
+            error.response?.data || error.message
+        );
+
+        res.status(500).json({
+            error: "Payment initialization failed",
+            details: error.response?.data || error.message
+        });
     }
 });
-
 /* =========================
    PAYSTACK WEBHOOK (SECURE)
 ========================= */
