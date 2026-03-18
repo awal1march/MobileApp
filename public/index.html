@@ -38,156 +38,192 @@ input, select, button { margin: 10px; padding: 10px; font-size: 16px; }
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<marquee id="noticeBar" behavior="scroll" direction="left" style="background:#222;color:#fff;padding:10px">
-Welcome to our Virtual Top Up service. Buy data for yourself or others easily!. Contact: "0542217459"
-</marquee>
 <title>📶 VTU Data Dashboard</title>
 
+<!-- NOTICE BAR -->
+<marquee style="background:#111;color:#fff;padding:10px;">
+Welcome to our Virtual Top Up service. Buy data easily! Contact: 0542217459
+</marquee>
+
 <style>
+
+/* BODY */
 body {
+    margin: 0;
     font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #2c5364);
+}
+
+/* HEADER */
+.header {
+    background: #000;
+    color: #fff;
+    padding: 15px;
     text-align: center;
-    padding: 40px;
-    background: #09a323;
+    font-size: 22px;
+    font-weight: bold;
 }
 
-h1 {
-    color: #333;
-    margin-bottom: 30px;
+/* MAIN CARD */
+.container {
+    max-width: 400px;
+    margin: 40px auto;
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    text-align: center;
 }
 
-input, select, button {
-    margin: 10px;
-    padding: 10px;
-    font-size: 16px;
-    width: 250px;
+/* INPUTS */
+input, select {
+    width: 90%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 15px;
 }
 
+/* BUTTONS */
 button {
-    cursor: pointer;
- 
-    color: rgb(34, 15, 138);
+    width: 95%;
+    padding: 12px;
+    margin: 10px 0;
     border: none;
-    border-radius: 4px;
-    transition: background 0.3s;
+    border-radius: 5px;
+    background: #007bff;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
 }
 
 button:hover {
-   background: #1f5ed8;
+    background: #0056b3;
 }
 
+/* NETWORK BUTTONS */
+.network-buttons {
+    display: flex;
+    justify-content: space-around;
+    margin: 15px 0;
+}
+
+.network-btn {
+    border: none;
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.network-btn:hover {
+    transform: scale(1.1);
+    background: #e0e0e0;
+}
+
+.logo {
+    width: 50px;
+    height: 40px;
+}
+
+/* OUTPUT */
 #log, #balance {
-    margin-top: 50px;
-    font-family: monospace;
+    margin-top: 15px;
+    font-size: 14px;
 }
 
-.network-buttons button {
-    width: 120px;
+/* NOTICE */
+.notice {
+    background: #ffcc00;
+    padding: 12px;
+    text-align: center;
+    font-weight: bold;
 }
 
-#notice-banner{
-  background:#ffcc00;
-  color:#000;
-  text-align:center;
-  padding:12px;
-  font-weight:bold;
-  font-size:16px;
-}
- .network-btn{
-    padding: 5px 5px;
-    font-size: 12px;
-}
-     .logo { 
-    width:35px;
-    height:25px;
-
+/* FOOTER */
+.footer {
+    text-align: center;
+    color: #fff;
+    padding: 15px;
+    font-size: 14px;
 }
 
-.network-btn{
-    padding: 5px 5px;
-    font-size: 12px;
-}
-     .logo { 
-    width:35px;
-    height:25px;
-
-}
-
-.network-btn{
-    padding: 5px 5px;
-    font-size: 12px;
-}
-     .logo { 
-    width:35px;
-    height:25px;
-
-}
 </style>
 </head>
 
 <body>
 
-<h1>📶 VTU Data Purchase</h1>
+<div class="header">
+📶 VTU Data Purchase Dashboard
+</div>
 
-<!-- EMAIL REQUIRED FOR PAYSTACK -->
-<input
-    type="email"
-    id="email"
-    placeholder="Enter email"
-    required
-/>
+<div class="container">
 
-<!-- USER PHONE NUMBER -->
-<input
-    type="tel"
-    id="phone"
-    placeholder="Please enter beneficiary number "
-    required
-/>
+<h3>Buy Data Instantly</h3>
 
-<!-- NETWORK SELECTION -->
+<!-- EMAIL -->
+<input type="email" id="email" placeholder="Enter your email">
+
+<!-- PHONE -->
+<input type="tel" id="phone" placeholder="Enter beneficiary number">
+
+<!-- NETWORK -->
 <div class="network-buttons">
     <button class="network-btn" onclick="selectNetwork('mtn')">
-    <img src="images/mtn.jpg" class="logo">
+        <img src="images/mtn.jpg" class="logo">
     </button>
 
     <button class="network-btn" onclick="selectNetwork('vodafone')">
-    <img src="images/tel.jpg" class="logo"> 
+        <img src="images/tel.jpg" class="logo">
     </button>
 
-    <button onclick="selectNetwork('airteltigo')">
-     <img src="images/atg.jpg" class="logo">    
+    <button class="network-btn" onclick="selectNetwork('airteltigo')">
+        <img src="images/atg.jpg" class="logo">
     </button>
 </div>
 
-<!-- DATA PLANS -->
+<!-- PLAN -->
 <select id="plan">
     <option value="">Select data plan</option>
 </select>
-<br>
 
-<!-- ACTION BUTTONS -->
+<!-- ACTIONS -->
 <button onclick="buyBundle()">💳 Pay & Buy Data</button>
 <button onclick="getWalletBalance()">💰 Check Wallet</button>
 
-<!-- OUTPUT AREA -->
+<!-- MTN LINK -->
+<button onclick="openMTN()">🌐 Visit MTN Website</button>
+
+<!-- OUTPUT -->
 <div id="balance"></div>
 <div id="log"></div>
 
-<!-- PAYSTACK INLINE SCRIPT (Optional if using redirect method) -->
+</div>
+
+<!-- NOTICE -->
+<div class="notice">
+⚠️ If MoMo prompt fails, dial *170# → Pending Approvals → Option 3
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+© 2026 VTU App | Powered by You 🚀
+</div>
+
+<!-- PAYSTACK -->
 <script src="https://js.paystack.co/v1/inline.js"></script>
-<!-- LINK TO YOUR FRONTEND SCRIPT -->
+
+<!-- SCRIPT -->
 <script src="script.js"></script>
-<button onclick="openMTN()">MTN Website</button>
 
 <script>
 function openMTN(){
     window.open("https://www.mtn.com", "_blank");
 }
 </script>
-<div id="notice-banner">
-⚠️ NOTICE: If the MoMo prompt does not appear, dial *170#, 
-go to Pending Approvals, and select Option 3 to approve the payment.
-</div>
+
 </body>
 </html>
